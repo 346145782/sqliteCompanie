@@ -3,6 +3,9 @@
 # coding=utf-8
 import csv
 import sys, sqlite3, os
+
+from PyQt5.uic.properties import QtGui
+
 from ui.mainWindow import Ui_MainWindow
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import QFileDialog, QMessageBox
@@ -162,7 +165,6 @@ class mywindow(QtWidgets.QMainWindow, Ui_MainWindow):
                 self.pushButton_4.setEnabled(True)
                 return
             self.progressBar.setValue(20)
-            time.sleep(1)
             #获取文件夹路径
             folder_path = self.textEdit_2.toPlainText()
             if len(folder_path) == 0:
@@ -194,6 +196,8 @@ class mywindow(QtWidgets.QMainWindow, Ui_MainWindow):
     def updateUi(self, res):
         self.progressBar.setValue(100)
         success_result = r'合并完成！'
+        # msg_box = QMessageBox(QMessageBox.Abort, '提示', '请先选择导出目标文件夹!')
+        # msg_box.exec_()
         self.label_3.setText(success_result)
         self.pushButton.setEnabled(True)
         self.pushButton_2.setEnabled(True)
