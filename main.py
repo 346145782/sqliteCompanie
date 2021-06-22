@@ -1,6 +1,7 @@
 # 这是一个示例 Python 脚本。
 
 # coding=utf-8
+import csv
 import sys, sqlite3, os
 from ui.mainWindow import Ui_MainWindow
 from PyQt5 import QtWidgets, QtCore
@@ -23,7 +24,7 @@ global i  # 配合db3list便于自定义函数中对数据库列表信息的引�
 i = 0
 
 
-def append_data(con_current_data, con_des_data, tables_current_data):
+def append_data(i, con_current_data, con_des_data, tables_current_data, file_path):
     # 把当前数据库的链接、目标数据库的链接、当前数据库的table列表同时传入
     print('\n' + db3list[i] + ' is Beginning !')
     m = 0
@@ -45,7 +46,16 @@ def append_data(con_current_data, con_des_data, tables_current_data):
                     "insert or replace into " + str(tables_current_data[m])[2:-3] + " values " + temp_sql,
                     temp_data_list)
                 con_des_data.commit()
-            print('\n' + db3list[i] + "-----" + str(tables_current_data[m]) + "   Finished!")
+            with open(str(file_path) + '/log.csv', 'a', newline = '') as csvfile:
+                fieldnames = ['文件名', '表名', '条数']
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                if i == 0 and m == 0:
+                    # 注意header是个好东西
+                    writer.writeheader()
+                writer.writerow(
+                    {'文件名': str(db3list[i]), '表名': str(tables_current_data[m]), '条数': str(len(temp_data_list))})
+                # writer.writerow({'文件名': str(db3list[i]), '表名': str(tables_current_data[m]), '条数': str(len(temp_data_list))})
+            print('\n' + db3list[i] + "-----" + str(tables_current_data[m]) + "总条数:" + str(len(temp_data_list)) + "Finished!")
             m += 1
         else:
             m += 1
@@ -66,7 +76,7 @@ def sql_modify(table_info_unmod):
     return (table_info_modified)
 
 
-def compare_tables(tables_cur_db3, tables_des_db3, con_current_db3, con_des_db3):
+def compare_tables(i, tables_cur_db3, tables_des_db3, con_current_db3, con_des_db3):
     j = 0
     while j < len(tables_cur_db3):
         if (not tables_cur_db3[j] in tables_des_db3) and (str(tables_cur_db3[j])[2:-3] != 'sqlite_sequence'):
@@ -169,8 +179,9 @@ class mywindow(QtWidgets.QMainWindow, Ui_MainWindow):
             pool = ThreadPoolExecutor(2)
             self.progressBar.setValue(60)
             time.sleep(1)
-            pool.submit(dbReader, self, file_path, folder_path).add_done_callback(self.updateUi)
             self.progressBar.setValue(80)
+            # dbReader(file_path, folder_path)
+            pool.submit(dbReader, file_path, folder_path).add_done_callback(self.updateUi)
             # 中间可以进行对文件的任意操作
         except:
             fail_result = r'合并失败！'
@@ -207,6 +218,7 @@ def dbReader(db3_path, file_path):
                     db3list.append(os.path.join(dir, file))
             except:
                 print("Got Exception")
+    file_path1 = file_path
     file_path = file_path + '/pwmis.db'
     # -----------------------------------------------------------
     # con_des = sqlite3.connect(sys.argv[2])
@@ -236,10 +248,10 @@ def dbReader(db3_path, file_path):
         cur_des.execute(sql_inqury_tables)
         tables_des = cur_des.fetchall()
         # 这里有一个前提假设：不同数据库文件的相同名称table具有相同的结构，避免了逐个字段判断和对表结构的调整
-        compare_tables(tables_current, tables_des, con_current, con_des)
+        compare_tables(i, tables_current, tables_des, con_current, con_des)
         # 经过compare_tables函数后，目标数据库的表格已经大于等于当前待合并的数据库了
         # 接下来逐个将表的信息录入目标数据库即可，因此再构建一个append_data函数
-        append_data(con_current, con_des, tables_current)
+        append_data(i, con_current, con_des, tables_current, file_path1)
         # 数据库验证 主要验证数量 需要时再取消备注
         # total_temp = sub_data(con_current, tables_current, datatable)
         # if isinstance(total_temp, int):
